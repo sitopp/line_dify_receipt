@@ -110,17 +110,15 @@ workflow:
         desc: ''
         model:
           completion_params:
-            json_schema: "{\n    \"name\": \"receipt_information\",\n    \"schema\"\
-              : {\n      \"type\": \"object\",\n      \"properties\": {\n        \"\
-              total_amount\": {\n          \"type\": \"string\",\n          \"description\"\
-              : \"合計金額\"\n        }\n      },\n      \"required\": [\n        \"total_amount\"\
-              \n      ],\n      \"additionalProperties\": false\n    },\n    \"strict\"\
-              : true\n  }"
+            json_schema: "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"\
+              total_amount\": {\n      \"type\": \"string\",\n      \"description\"\
+              : \"合計金額\"\n    }\n  },\n  \"required\": [\n    \"total_amount\"\n \
+              \ ]\n}"
             response_format: json_schema
             temperature: 0.7
           mode: chat
-          name: gpt-4o-mini
-          provider: openai
+          name: gemini-1.5-flash
+          provider: google
         prompt_template:
         - id: 9b2f7750-f18e-4e7f-8a20-b3ce750e3e4b
           role: system
@@ -128,7 +126,7 @@ workflow:
         - id: f38ad63b-4558-4df8-87a0-2786216f3102
           role: user
           text: '{{#1734084642746.receipt#}}'
-        selected: true
+        selected: false
         title: LLM
         type: llm
         variables: []
@@ -140,10 +138,10 @@ workflow:
       height: 98
       id: '1734084659083'
       position:
-        x: 381.6868748639181
+        x: 378.96423831521247
         y: 282
       positionAbsolute:
-        x: 381.6868748639181
+        x: 378.96423831521247
         y: 282
       selected: true
       sourcePosition: right
@@ -174,6 +172,6 @@ workflow:
       type: custom
       width: 244
     viewport:
-      x: -37.773218788524844
-      y: 106.43793232920481
-      zoom: 0.764715803274603
+      x: -305.9691861923119
+      y: 60.79166212584704
+      zoom: 0.7345820730096421
