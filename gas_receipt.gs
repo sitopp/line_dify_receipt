@@ -1,4 +1,4 @@
-// const debugsheet = SpreadsheetApp.openById('デバッグ用のスプシのID').getSheetByName('log');
+const debugsheet = SpreadsheetApp.openById('デバッグ用のスプシのIDに書き換える。そのスプシにはlogというシートを作る。').getSheetByName('log');
 
 const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
 const DIFY_API_KEY = PropertiesService.getScriptProperties().getProperty('DIFY_API_KEY');
@@ -28,21 +28,54 @@ function doPost(e) {
     const replyToken = event.replyToken;
 
     if (event.message && event.message.type === 'image') {
+
+      //画像処理
       const messageId = event.message.id;
       Logger.log('画像メッセージ受信: messageId=%s', messageId);
       const imageBlob = getImageFromLINE(messageId);
       Logger.log('画像取得成功。サイズ: %d bytes', imageBlob.getBytes().length);
-
       const base64Image = Utilities.base64Encode(imageBlob.getBytes());
       Logger.log('画像をbase64エンコード完了: length=%d', base64Image.length);
 
-      const { total_amount } = analyzeReceipt(base64Image);
-      Logger.log('レシート解析結果: total_amount=%s', total_amount);
 
-      writeToSheet(total_amount);
-      Logger.log('スプレッドシートに記入完了');
+      // Difyにファイルをアップロード
+      Logger.log('analyzeReceipt start');
+      const fileId = uploadFileToDify(base64Image);
+      Logger.log('DifyファイルID取得: %s', fileId);
 
-      replyMessage(replyToken, `レシートの情報:\n合計金額: ${total_amount}\nスプレッドシートに記録しました。確認はこちら:\n${RESULT_SHEET_URL}`);
+      // Difyでレシートを解析
+      const dify_result = runDifyWorkflow(fileId);
+      Logger.log('Difyでレシートを解析した結果のJSON: %s', JSON.stringify(dify_result));
+      Logger.log('analyzeReceipt end');
+      
+      //Jsonパース
+      const sheetData = processJson(dify_result);
+      
+      //Jsonパース
+      // try {
+      //   const sheetData = processJson(dify_result);
+      // } catch (parseError) {
+      //   Logger.log('JSONパースに失敗しました: %s', parseError);
+      //   replyMessage(replyToken, 'JSONパースに失敗しました');
+      // }
+
+      if (!sheetData) {
+        Logger.log('JSONパースに失敗しました: %s', parseError);
+        replyMessage(replyToken, 'JSONパースに失敗しました');
+      }
+
+      Logger.log('Jsonをパースした結果: %s', JSON.stringify(sheetData));
+      
+
+      // try {
+      writeToSheet(sheetData);
+      // } catch (parseError) {
+      //   Logger.log('スプシ書き込みに失敗しました: %s', parseError);
+      //   replyMessage(replyToken, 'スプシ書き込みに失敗しました');
+      // }
+
+      // replyMessage(replyToken, `レシートの情報:\n合計金額: ${total_amount}\nスプレッドシートに記録しました。確認はこちら:\n${RESULT_SHEET_URL}`);
+      replyMessage(replyToken, `レシートの情報をスプレッドシートに記録しました。確認はこちら:\n${RESULT_SHEET_URL}`);
       Logger.log('返信完了');
     } else {
       Logger.log('画像メッセージでないため、メッセージを返信します。');
@@ -88,17 +121,17 @@ function getImageFromLINE(messageId) {
   return response.getBlob();
 }
 
-// Difyでレシートを解析
-function analyzeReceipt(base64Image) {
-  Logger.log('analyzeReceipt start');
-  const fileId = uploadFileToDify(base64Image);
-  Logger.log('DifyファイルID取得: %s', fileId);
+// // Difyでレシートを解析
+// function analyzeReceipt(base64Image) {
+//   Logger.log('analyzeReceipt start');
+//   const fileId = uploadFileToDify(base64Image);
+//   Logger.log('DifyファイルID取得: %s', fileId);
 
-  const result = runDifyWorkflow(fileId);
-  Logger.log('Difyワークフロー実行結果: total_amount=%s', result.total_amount);
-  Logger.log('analyzeReceipt end');
-  return result;
-}
+//   const result = runDifyWorkflow(fileId);
+//   Logger.log('Difyワークフロー実行結果: total_amount=%s', result.total_amount);
+//   Logger.log('analyzeReceipt end');
+//   return result;
+// }
 
 // Difyにファイルをアップロード
 function uploadFileToDify(base64Image) {
@@ -187,41 +220,79 @@ function runDifyWorkflow(fileId) {
   if (result && result.data && result.data.outputs) {
     Logger.log('Difyワークフローoutputs全体: %s', JSON.stringify(result.data.outputs));
     const outputs = result.data.outputs;
-
-    // textフィールドにJSON文字列が入っているため、これをパース
-    if (outputs.text) {
-      try {
-        const parsed = JSON.parse(outputs.text);
-        const total_amount = parsed.total_amount || '不明';
-        Logger.log('取得した出力:total_amount=%s',  total_amount);
-        Logger.log('runDifyWorkflow end');
-        return { total_amount };
-      } catch (parseError) {
-        Logger.log('textフィールドのJSONパースに失敗しました: %s', parseError);
-        throw new Error('レシート解析結果のパースに失敗しました。');
-      }
-    } else {
-      Logger.log('textフィールドが存在しませんでした。');
-      throw new Error('レシート解析結果が取得できませんでした。');
-    }
+    return outputs;
+    // // textフィールドにJSON文字列が入っているため、これをパース
+    // if (outputs.text) {
+    //   try {
+    //     const parsed = JSON.parse(outputs.text);
+    //     const total_amount = parsed.total_amount || '不明';
+    //     Logger.log('取得した出力:total_amount=%s',  total_amount);
+    //     Logger.log('runDifyWorkflow end');
+    //     return { total_amount };
+    //   } catch (parseError) {
+    //     Logger.log('textフィールドのJSONパースに失敗しました: %s', parseError);
+    //     throw new Error('レシート解析結果のパースに失敗しました。');
+    //   }
+    // } else {
+    //   Logger.log('textフィールドが存在しませんでした。');
+    //   throw new Error('レシート解析結果が取得できませんでした。');
+    // }
   } else {
     Logger.log('ワークフローの結果が期待した形式でありません: %s', JSON.stringify(result));
     throw new Error('レシート解析結果の取得に失敗しました。');
   }
 }
 
+// JSONデータを解析する
+function processJson(jsonData) {
+
+  Logger.log('processJson内の先頭: %s', JSON.stringify(jsonData));
+
+  if (jsonData.text) {
+    try {
+      const parsed = JSON.parse(jsonData.text);
+      const date = parsed.date || '不明';
+      const total_amount = parsed.total_amount || '不明';
+      const items = parsed.items || [];
+
+      const sheetData = {
+        date: date,
+        total_amount: total_amount,
+        items: items
+      };
+      return sheetData;
+
+    } catch (parseError) {
+      Logger.log('processJson内で JSONパースに失敗しました。jsonDataがおかしい: %s', parseError);
+      throw new Error('レシート解析結果のパースに失敗しました。');
+    }
+  } else {
+    Logger.log('processJson内で JSONパースに失敗しました。jsonDataの中身がない: %s', parseError);
+    throw new Error('レシート解析結果のパースに失敗しました。');
+
+  }
+}
+
 
 // スプレッドシートに書き込む
-function writeToSheet(total_amount) {
+function writeToSheet(data) {
   const sheet = SpreadsheetApp.openById(RESULT_SHEET_ID).getSheetByName('list');
-  //日付を取得する 
-  const currentDate = new Date();
-  const formattedDate = Utilities.formatDate(currentDate, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
-  sheet.appendRow([formattedDate, total_amount]);
+  
+  // JSONから取得したデータ
+  const date = data.date;
+  const total_amount = data.total_amount;
+  const items = data.items || []; // itemsはnameとamountのリスト
+  
+  // 各アイテムを1行ごとに書き出す
+  items.forEach(item => {
+    const name = item.name;
+    const amount = item.amount;
+    sheet.appendRow([date, name, amount, total_amount]);
+  });
 
-  Logger.log('スプシ書き込みに成功しました: %s', formattedDate,total_amount);
-
+  Logger.log('スプシ書き込みに成功しました: %s, %s', date, total_amount);
 }
+
 
 
 // LINEにメッセージを返信
