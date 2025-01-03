@@ -3,10 +3,10 @@ app:
   icon: 🤖
   icon_background: '#FFEAD5'
   mode: workflow
-  name: Dify×LINE レシート管理システム
+  name: 健康管理Dify×LINE レシート管理システム
   use_icon_as_answer_icon: false
 kind: app
-version: 0.1.4
+version: 0.1.5
 workflow:
   conversation_variables: []
   environment_variables: []
@@ -110,19 +110,42 @@ workflow:
         desc: ''
         model:
           completion_params:
-            json_schema: "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"\
-              total_amount\": {\n      \"type\": \"string\",\n      \"description\"\
-              : \"合計金額\"\n    }\n  },\n  \"required\": [\n    \"total_amount\"\n \
-              \ ]\n}"
+            json_schema: "{\n    \"name\": \"receipt_information\",\n    \"schema\"\
+              : {\n      \"type\": \"object\",\n      \"properties\": {\n        \"\
+              date\": {\n          \"type\": \"string\",\n          \"description\"\
+              : \"今日の日付 (YYYY-MM-DD形式)\"\n        },\n        \"items\": {\n     \
+              \     \"type\": \"array\",\n          \"items\": {\n            \"type\"\
+              : \"object\",\n            \"properties\": {\n              \"name\"\
+              : {\n                \"type\": \"string\",\n                \"description\"\
+              : \"品名\"\n              },\n              \"amount\": {\n          \
+              \      \"type\": \"string\",\n                \"description\": \"金額\"\
+              \n              }\n            },\n            \"required\": [\"name\"\
+              , \"amount\"],\n            \"additionalProperties\": false\n      \
+              \    },\n          \"description\": \"購入した商品のリスト\"\n        },\n   \
+              \     \"total_amount\": {\n          \"type\": \"string\",\n       \
+              \   \"description\": \"合計金額\"\n        }\n      },\n      \"required\"\
+              : [\n        \"date\",\n        \"total_amount\",\n        \"items\"\
+              \n      ],\n      \"additionalProperties\": false\n    },\n    \"strict\"\
+              : true\n}"
             response_format: json_schema
             temperature: 0.7
           mode: chat
-          name: gemini-1.5-flash
-          provider: google
+          name: gpt-4o-mini
+          provider: openai
         prompt_template:
         - id: 9b2f7750-f18e-4e7f-8a20-b3ce750e3e4b
           role: system
-          text: レシートから「合計」を抽出して、JSON形式で出力してください。
+          text: 'レシートから
+
+            ・"date":日付
+
+            ・"items":品名("name")と金額("amount")
+
+            ・"total_amount"
+
+            これらを抽出して、JSON形式で出力してください。
+
+            '
         - id: f38ad63b-4558-4df8-87a0-2786216f3102
           role: user
           text: '{{#1734084642746.receipt#}}'
@@ -138,12 +161,12 @@ workflow:
       height: 98
       id: '1734084659083'
       position:
-        x: 378.96423831521247
+        x: 382.99455020646735
         y: 282
       positionAbsolute:
-        x: 378.96423831521247
+        x: 382.99455020646735
         y: 282
-      selected: true
+      selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -172,6 +195,6 @@ workflow:
       type: custom
       width: 244
     viewport:
-      x: -305.9691861923119
-      y: 60.79166212584704
-      zoom: 0.7345820730096421
+      x: -16.246380657132136
+      y: -59.47492623547231
+      zoom: 0.7829519048913495
